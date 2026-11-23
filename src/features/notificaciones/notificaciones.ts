@@ -3,6 +3,7 @@ import { router } from 'expo-router'
 import type { DevicePushToken, Notification, NotificationResponse } from 'expo-notifications'
 import { Platform } from 'react-native'
 
+import { asignacionKeys } from '@/features/asignacion/queries'
 import { atencionActivaQuery, atencionKeys, pasajeroDelTraslado } from '@/features/atencion/queries'
 import {
   avisarTrasladoRetirado,
@@ -191,6 +192,19 @@ function actualizarPorDespacho(datos: Record<string, unknown> | undefined, param
 }
 
 /**
+ * Un push de asignacion dice que la central le asigno un incidente a la unidad y espera su confirmacion, o que esa
+ * asignacion dejo de hacer falta. Se vuelve a pedir en el acto: el aviso para confirmar aparece, o se va, sin esperar
+ * al proximo pedido periodico. Devuelve si el push era de una asignacion.
+ */
+function actualizarPorAsignacion(datos: Record<string, unknown> | undefined, paramedicoId: number) {
+  if (datos?.tipo !== 'INCIDENTE_POR_CONFIRMAR' && datos?.tipo !== 'ASIGNACION_RETIRADA') {
+    return false
+  }
+  void queryClient.invalidateQueries({ queryKey: asignacionKeys.pendiente(paramedicoId) })
+  return true
+}
+
+/**
  * Lo que la central le hizo a la unidad sin que la tripulación lo pidiera: le cerró la atención, la sacó de servicio o
  * la volvió a poner, o le cerró el turno a este paramédico. El push solo trae el aviso: lo demás se vuelve a pedir.
  */
@@ -236,7 +250,11 @@ export function recibirNotificacion(notificacion: Notification, paramedicoId: nu
   if (actualizarPorResumen(datos) !== null) {
     return
   }
-  if (!actualizarPorDespacho(datos, paramedicoId) && !actualizarPorAvisoDeLaCentral(datos, paramedicoId)) {
+  if (
+    !actualizarPorAsignacion(datos, paramedicoId) &&
+    !actualizarPorDespacho(datos, paramedicoId) &&
+    !actualizarPorAvisoDeLaCentral(datos, paramedicoId)
+  ) {
     actualizarPorTraslado(datos, paramedicoId)
   }
 }
@@ -264,8 +282,13 @@ export function abrirIncidenteDeNotificacion(respuesta: NotificationResponse, pa
     }
     return
   }
-  // El despacho también trae el incidente, pero no hay nada que tomar: la unidad ya va para allá.
-  if (actualizarPorDespacho(datos, paramedicoId) || actualizarPorAvisoDeLaCentral(datos, paramedicoId)) {
+  // Una asignacion se contesta en el inicio. El despacho también trae el incidente, pero no hay nada que tomar: la
+  // unidad ya va para allá.
+  if (
+    actualizarPorAsignacion(datos, paramedicoId) ||
+    actualizarPorDespacho(datos, paramedicoId) ||
+    actualizarPorAvisoDeLaCentral(datos, paramedicoId)
+  ) {
     irAInicio()
     return
   }
