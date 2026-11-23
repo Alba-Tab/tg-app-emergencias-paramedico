@@ -10,11 +10,20 @@ import { mensajeDeError } from '@/shared/api/cliente'
 import { useAhora } from '@/shared/reloj/useAhora'
 import { BotonPrincipal } from '@/shared/ui/BotonPrincipal'
 
-import type { Asignacion } from './api'
+import type { Asignacion, Prioridad } from './api'
 import { asignacionPendienteQuery, confirmarAsignacionMutation, rechazarAsignacionMutation } from './queries'
 
 /** Por que la tripulacion no puede ir. Se manda el texto: la central lo lee tal cual. */
 const MOTIVOS = ['La unidad tiene una falla', 'Estamos con otro paciente', 'No tenemos el equipo completo', 'Otro motivo']
+
+/** Lo que la norma le pide a la unidad segun la prioridad del caso. El color nunca va solo. */
+const TEXTO_DE_PRIORIDAD: Record<Prioridad, string> = {
+  ROJA: 'Prioridad roja: salir de inmediato',
+  AMARILLA: 'Prioridad amarilla: salir rápido',
+  VERDE: 'Prioridad verde',
+}
+
+const COLOR_DE_PRIORIDAD = { ROJA: '$primario', AMARILLA: '$enAtencion', VERDE: '$disponible' } as const
 
 type Props = {
   paramedicoId: number
@@ -86,6 +95,14 @@ function Aviso({ paramedicoId, asignacion }: Props & { asignacion: Asignacion })
             <Text color="$texto" fontSize={16} lineHeight={22} fontWeight="500">
               {detalles.join(' · ')}
             </Text>
+          ) : null}
+          {!eligiendoMotivo && asignacion.prioridad ? (
+            <XStack self="flex-start" items="center" gap={8} px={10} py={6} rounded={8} borderWidth={1} borderColor="$bordeFuerte">
+              <XStack width={10} height={10} rounded={3} bg={COLOR_DE_PRIORIDAD[asignacion.prioridad]} />
+              <Text color="$texto" fontSize={15} lineHeight={20} fontWeight="600">
+                {TEXTO_DE_PRIORIDAD[asignacion.prioridad]}
+              </Text>
+            </XStack>
           ) : null}
         </YStack>
 
