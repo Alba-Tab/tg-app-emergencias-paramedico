@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { Button } from 'tamagui'
 
+import { AsignacionPendiente } from '@/features/asignacion/AsignacionPendiente'
 import { AtencionEnCurso } from '@/features/atencion/AtencionEnCurso'
 import { atencionActivaQuery } from '@/features/atencion/queries'
 import { BotonDemo } from '@/features/demo/BotonDemo'
@@ -118,11 +119,15 @@ export function PantallaInicio() {
       {atencion.data ? (
         <AtencionEnCurso paramedicoId={datosParamedico.id} atencion={atencion.data} />
       ) : (
-        <MapaDeIncidentes
-          ambulancia={ambulancia}
-          nombreParamedico={datosParamedico.nombreCompleto}
-          inicioTurno={turno.inicio}
-        />
+        <>
+          <MapaDeIncidentes
+            ambulancia={ambulancia}
+            nombreParamedico={datosParamedico.nombreCompleto}
+            inicioTurno={turno.inicio}
+          />
+          {/* Solo una unidad libre recibe asignaciones: con una atencion en curso no hay nada que confirmar. */}
+          <AsignacionPendiente paramedicoId={datosParamedico.id} />
+        </>
       )}
       <AvisoDeServicio paramedicoId={datosParamedico.id} placa={ambulancia.placa} />
       {DEMO ? <BotonDemo /> : null}
